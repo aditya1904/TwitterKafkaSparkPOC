@@ -1,7 +1,7 @@
 package com.app
 
 import com.app.utils.{SparkUtils, TwitterUtils}
-import org.apache.spark.streaming.twitter.TwitterUtils
+import twitter4j.{FilterQuery, TwitterStreamFactory}
 object App {
   def main(args: Array[String]): Unit = {
 
@@ -9,15 +9,12 @@ object App {
     val twitter = new TwitterUtils
     val sc = spark.streamingContext.sparkContext
     sc.setLogLevel("ERROR")
-    val tweets = TwitterUtils.createStream(spark.streamingContext,
-                                                    Some(twitter.twitterAuth))
 
-    val ipltweets = tweets.filter(_.getLang == "en")
+    val tweetstream = new TwitterStreamFactory(twitter.twitterDevConfiguration).getInstance()
 
-    ipltweets.saveAsTextFiles("iplt20", "json")
+    tweetstream.addListener(twitter.simpleStatusListener)
 
-    spark.streamingContext.start()
-    spark.streamingContext.awaitTermination()
+    tweetstream.filter(new FilterQuery().track(Array("#CSKvKKR")))
 
   }
 }
