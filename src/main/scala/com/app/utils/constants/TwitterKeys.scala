@@ -1,4 +1,4 @@
-package com.app.constants
+package com.app.utils.constants
 
 object TwitterKeys {
 
