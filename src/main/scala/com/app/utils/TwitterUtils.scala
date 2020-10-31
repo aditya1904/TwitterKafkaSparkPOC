@@ -1,13 +1,11 @@
 package com.app.utils
 
-import com.app.utils.constants.KafkaConstants.{BROKERS, KAFKA_TOPIC}
-import com.app.utils.constants.TwitterKeys._
 import com.app.kafka.Producer
-import org.apache.spark.sql.types.{StringType, StructType}
+import com.app.utils.constants.TwitterKeys._
 import twitter4j.conf.{Configuration, ConfigurationBuilder}
 import twitter4j.{StallWarning, Status, StatusDeletionNotice, StatusListener}
 
-class TwitterUtils {
+class TwitterUtils (kafkaproducer: Producer) {
 
   val twitterDevConfiguration: Configuration =
     new ConfigurationBuilder()
@@ -15,16 +13,8 @@ class TwitterUtils {
       .setOAuthConsumerSecret(CONSUMER_SECRET)
       .setOAuthAccessToken(ACCESS_TOKEN)
       .setOAuthAccessTokenSecret(ACCESS_TOKEN_SECRET)
+      .setTweetModeExtended(true)
       .build
-
-  val producer = new Producer(BROKERS, KAFKA_TOPIC)
-
-  val tweetSchema: StructType = new StructType()
-    .add("id", StringType, nullable = true)
-    .add("tweet", StringType, nullable = true)
-    .add("user", StringType, nullable = true)
-    .add("time", StringType, nullable = true)
-
 
   private def simpleJSON(status: Status) : String = {
     s"""
@@ -36,11 +26,10 @@ class TwitterUtils {
        |}""".stripMargin.replaceAll("\n", " ")
   }
 
-
   def simpleStatusListener: StatusListener = new StatusListener() {
     override def onStatus(status: Status): Unit = {
-      producer.sendTweets(simpleJSON(status))
-      println(simpleJSON(status))
+      kafkaproducer.sendTweets(simpleJSON(status))
+//      println(simpleJSON(status))
     }
 
     override def onDeletionNotice(statusDeletionNotice: StatusDeletionNotice): Unit = {}
@@ -49,12 +38,8 @@ class TwitterUtils {
 
     override def onScrubGeo(l: Long, l1: Long): Unit = {}
 
-    override def onException(e: Exception): Unit = {
-      e.printStackTrace()
-    }
+    override def onException(e: Exception): Unit = {e.printStackTrace()}
 
-    override def onStallWarning(stallWarning: StallWarning): Unit = {
-      println(stallWarning.getMessage)
-    }
+    override def onStallWarning(stallWarning: StallWarning): Unit = {println(stallWarning.getMessage)}
   }
 }
